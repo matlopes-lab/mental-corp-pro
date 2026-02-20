@@ -548,9 +548,23 @@ html, body {
 
 /* ==================== DIMENSION SCORES ==================== */
 .dimension-scores {
+  margin-bottom: 28px;
+}
+
+.domain-header {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 20px 0 10px;
+}
+
+.domain-header:first-child {
+  margin-top: 0;
+}
+
+.dim-score-grid {
   display: flex;
   gap: 10px;
-  margin-bottom: 28px;
   overflow-x: auto;
   padding-bottom: 4px;
 }

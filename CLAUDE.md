@@ -19,15 +19,13 @@ mental-corp-pro/
 ```
 
 ### Three-view SPA flow:
-1. **Welcome Page** — "Diagnóstico Inicial" with 6 dimensions listed (only "Exigências do Trabalho" is active, rest are locked)
-2. **Wizard Page** — 14 questions with progress bar, auto-advance on selection (350ms delay)
+1. **Welcome Page** — "Diagnóstico Inicial" with 6 dimensions listed (Exigências do Trabalho and Organização are active, rest are locked)
+2. **Wizard Page** — 27 questions (14 + 13) with progress bar, auto-advance on selection (350ms delay), dynamic subtitle per domain
 3. **Results Page** — Donut chart with gradient, sub-dimension score cards, and contextual recommendations with external links
 
 ## COPSOQ II Implementation
 
-### Domain: Exigências Laborais (Q1–Q14)
-
-Only 1 of 6 domains is active. The other 5 appear locked on the welcome page.
+### Domain 1: Exigências Laborais (Q1–Q14) — Inversion: No
 
 | Sub-dimension | Questions | Description |
 |---|---|---|
@@ -39,12 +37,25 @@ Only 1 of 6 domains is active. The other 5 appear locked on the welcome page.
 
 **Note:** Q9 and Q10 are marked as "X" (placeholder) in the original report. Standard COPSOQ II emotional demand items were used instead.
 
+### Domain 2: Organização do Trabalho e Conteúdo (Q15–Q27) — Inversion: Yes
+
+| Sub-dimension | Questions | Description |
+|---|---|---|
+| Influência no Trabalho | Q15–Q18 | Influence over work decisions |
+| Possib. Desenvolvimento | Q19–Q21 | Development opportunities |
+| Variação no Trabalho | Q22 | Work variety |
+| Previsibilidade | Q23–Q24 | Information and predictability |
+| Transparência do Papel | Q25–Q27 | Role clarity |
+
+2 of 6 domains are active. The other 4 appear locked on the welcome page.
+
 ### Scoring Methodology
 
 - **Scale:** Likert 1–5 (Nunca → Sempre)
 - **Conversion:** `Score 0–100 = (Média - 1) × 25`
-- **Direction:** No inversion — high values = higher risk
-- **Display:** Results show inverted well-being score (100 - risk) for the donut chart
+- **Domain 1 direction:** No inversion — high values = higher risk
+- **Domain 2 direction:** Inverted — high raw values = protective, risk = `100 - rawScore`
+- **Overall:** Mean of domain risk scores → inverted to well-being for donut chart display
 
 ### Risk Classification (0–100 scale)
 
@@ -94,6 +105,6 @@ Each risk level triggers different recommendations. Buttons are `<a>` links with
 
 - [ ] Replace placeholder recommendation URLs with real external links
 - [ ] Get actual text for Q9 and Q10 (Exigências Emocionais)
-- [ ] Unlock remaining 5 COPSOQ II domains (Organização, Relações, Valores, Interface Trabalho-Indivíduo, Saúde e Bem-estar)
+- [ ] Unlock remaining 4 COPSOQ II domains (Relações, Valores, Interface Trabalho-Indivíduo, Saúde e Bem-estar)
 - [ ] Configure custom domain for GitHub Pages
 - [ ] Add analytics/tracking for demo usage

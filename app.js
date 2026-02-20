@@ -29,6 +29,10 @@ function renderQuestion() {
   document.getElementById('progress-fill').style.width = pct + '%';
   document.getElementById('progress-text').textContent = pct + '% Concluído';
 
+  // Dynamic subtitle based on current question's domain
+  const domainMeta = DOMAINS.find(d => d.key === q.domain);
+  document.getElementById('wizard-subtitle').textContent = domainMeta ? domainMeta.subtitle : '';
+
   // Question text
   document.getElementById('question-text').textContent = q.text;
 
@@ -100,20 +104,12 @@ function prevQuestion() {
  * Conversão COPSOQ II:
  *   Escala Likert 1–5 (opção index 0–4 → valor 1–5)
  *   Score 0–100 = (Média - 1) × 25
- *   Domínio Exigências Laborais: Inversão = Não
- *     → Valores altos = maior risco
+ *
+ *   Domínio 1 (Exigências): Inversão = Não → alto = risco
+ *   Domínio 2 (Organização): Inversão = Sim → alto = protetor, risco = 100 - rawScore
  */
 function calculateScores() {
-  // Score global do domínio
-  let sum = 0;
-  QUESTIONS.forEach(q => {
-    const likert = (answers[q.id] ?? 0) + 1; // index 0–4 → likert 1–5
-    sum += likert;
-  });
-  const mean = sum / QUESTIONS.length;
-  const domainScore = Math.round((mean - 1) * 25);
-
-  // Sub-dimensões
+  // Compute sub-dimension scores (risk scale 0–100)
   const subScores = SUB_DIMENSIONS.map(dim => {
     let dimSum = 0;
     dim.questionIds.forEach(qId => {
@@ -121,22 +117,39 @@ function calculateScores() {
       dimSum += likert;
     });
     const dimMean = dimSum / dim.questionIds.length;
-    const score = Math.round((dimMean - 1) * 25);
+    let score = Math.round((dimMean - 1) * 25);
+
+    // Invert for Domain 2 (protective dimensions)
+    const domainMeta = DOMAINS.find(d => d.key === dim.domain);
+    if (domainMeta && domainMeta.inverted) {
+      score = 100 - score;
+    }
+
     return { ...dim, score };
   });
 
-  return { domainScore, subScores };
+  // Compute per-domain risk scores (mean of sub-dimension risk scores)
+  const domainScores = DOMAINS.map(d => {
+    const domainSubs = subScores.filter(s => s.domain === d.key);
+    const mean = domainSubs.reduce((acc, s) => acc + s.score, 0) / domainSubs.length;
+    return { key: d.key, label: d.label, score: Math.round(mean) };
+  });
+
+  // Overall risk = mean of all domain risk scores
+  const overallRisk = Math.round(domainScores.reduce((acc, d) => acc + d.score, 0) / domainScores.length);
+
+  return { overallRisk, domainScores, subScores };
 }
 
 /* ==================== RESULTS ==================== */
 /**
- * domainScore = risco (0–100, alto = ruim)
+ * overallRisk = risco (0–100, alto = ruim)
  * wellbeingScore = bem-estar (0–100, alto = bom) = 100 - risco
  */
 function finishDiagnosis() {
-  const { domainScore, subScores } = calculateScores();
-  const wellbeingScore = 100 - domainScore;
-  const riskClassification = classifyScore(domainScore);
+  const { overallRisk, domainScores, subScores } = calculateScores();
+  const wellbeingScore = 100 - overallRisk;
+  const riskClassification = classifyScore(overallRisk);
 
   // Mapa de risco → label de bem-estar
   const wellbeingLabels = {
@@ -155,7 +168,7 @@ function finishDiagnosis() {
   // Draw donut (usa score de bem-estar para preenchimento visual)
   drawDonut(wellbeingScore, subScores);
 
-  // Dimension score cards (mostra risco por sub-dimensão)
+  // Dimension score cards (mostra risco por sub-dimensão, agrupado por domínio)
   renderDimensionScores(subScores);
 
   // Recommendations (baseadas no nível de risco)
@@ -247,30 +260,46 @@ function renderDimensionScores(subScores) {
   const container = document.getElementById('dimension-scores');
   container.innerHTML = '';
 
-  subScores.forEach(dim => {
-    const statusText = dim.score <= 25
-      ? 'Risco muito baixo'
-      : dim.score <= 50
-        ? 'Risco baixo'
+  // Group by domain and render with domain headers
+  DOMAINS.forEach(domain => {
+    const domainSubs = subScores.filter(s => s.domain === domain.key);
+    if (domainSubs.length === 0) return;
+
+    const header = document.createElement('h3');
+    header.className = 'domain-header';
+    header.textContent = domain.label;
+    container.appendChild(header);
+
+    const grid = document.createElement('div');
+    grid.className = 'dim-score-grid';
+
+    domainSubs.forEach(dim => {
+      const statusText = dim.score <= 25
+        ? 'Risco muito baixo'
+        : dim.score <= 50
+          ? 'Risco baixo'
+          : dim.score <= 75
+            ? 'Risco moderado'
+            : 'Risco elevado';
+
+      const iconHtml = dim.score <= 50
+        ? '<span style="color:#5c8a6e">&#10004;</span>'
         : dim.score <= 75
-          ? 'Risco moderado'
-          : 'Risco elevado';
+          ? '<span style="color:#c4a265">&#9888;</span>'
+          : '<span style="color:#c45a3c">&#9888;</span>';
 
-    const iconHtml = dim.score <= 50
-      ? '<span style="color:#5c8a6e">&#10004;</span>'
-      : dim.score <= 75
-        ? '<span style="color:#c4a265">&#9888;</span>'
-        : '<span style="color:#c45a3c">&#9888;</span>';
+      const card = document.createElement('div');
+      card.className = 'dim-score-card';
+      card.innerHTML = `
+        <div class="dim-icon">${iconHtml}</div>
+        <div class="dim-name">${dim.label}</div>
+        <div class="dim-value">Score: ${dim.score}</div>
+        <div class="dim-status">${statusText}</div>
+      `;
+      grid.appendChild(card);
+    });
 
-    const card = document.createElement('div');
-    card.className = 'dim-score-card';
-    card.innerHTML = `
-      <div class="dim-icon">${iconHtml}</div>
-      <div class="dim-name">${dim.label}</div>
-      <div class="dim-value">Score: ${dim.score}</div>
-      <div class="dim-status">${statusText}</div>
-    `;
-    container.appendChild(card);
+    container.appendChild(grid);
   });
 }
 
