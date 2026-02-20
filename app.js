@@ -9,6 +9,10 @@ function showPage(pageId) {
   window.scrollTo(0, 0);
 }
 
+function doLogin() {
+  showPage('page-welcome');
+}
+
 function startDiagnosis() {
   currentQuestion = 0;
   showPage('page-wizard');
